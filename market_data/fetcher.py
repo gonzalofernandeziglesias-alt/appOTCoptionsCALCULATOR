@@ -124,6 +124,7 @@ def fetch_risk_free_rate(currency='EUR'):
     Fetch risk-free rate for a currency.
     EUR: ECB €STR -> ECB deposit facility rate -> default.
     USD: Yahoo ^IRX (13-week T-bill) -> default.
+    GBP: Bank of England Bank Rate -> default.
 
     Returns: (float rate, str source) or (default, 'default')
     """
@@ -131,8 +132,8 @@ def fetch_risk_free_rate(currency='EUR'):
         'EUR': 0.025,
         'USD': 0.045,
         'GBP': 0.04,
-        'CHF': 0.01,
-        'JPY': 0.001,
+        'CHF': 0.005,
+        'JPY': 0.005,
     }
 
     if currency == 'EUR':
@@ -155,6 +156,11 @@ def fetch_risk_free_rate(currency='EUR'):
             rate = irx / 100.0
             if 0 <= rate <= 0.20:
                 return rate, 'Yahoo ^IRX'
+
+    if currency == 'GBP':
+        rate = _boe_bank_rate()
+        if rate is not None:
+            return rate, 'BoE Bank Rate'
 
     default = defaults.get(currency)
     return default, 'default'
@@ -182,6 +188,32 @@ def _ecb_csv_rate(url):
                 log.warning("ECB rate %s out of range", rate)
     except Exception as e:
         log.warning("ECB fetch error: %s", e)
+    return None
+
+
+def _boe_bank_rate():
+    """Fetch the current Bank of England Bank Rate from their statistical database."""
+    try:
+        url = ('https://www.bankofengland.co.uk/boeapps/database/'
+               'fromshowcolumns.asp?csv.x=yes&SeriesCodes=IUDBEDR'
+               '&UsingCodes=Y&CSVF=CN&VPD=Y&VFD=N')
+        resp = requests.get(url, headers=_HEADERS, timeout=_TIMEOUT)
+        log.info("BoE Bank Rate -> status %s", resp.status_code)
+        if resp.status_code != 200:
+            return None
+        lines = resp.text.strip().split('\n')
+        # Last data line contains the most recent rate (percentage value)
+        for line in reversed(lines):
+            parts = [p.strip().strip('"') for p in line.split(',')]
+            if len(parts) >= 2:
+                try:
+                    rate = float(parts[-1])
+                    if 0 <= rate <= 20:
+                        return rate / 100.0
+                except ValueError:
+                    continue
+    except Exception as e:
+        log.warning("BoE Bank Rate fetch error: %s", e)
     return None
 
 

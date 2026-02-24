@@ -337,6 +337,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // SLV IV + OTC Spread (show as reference, don't auto-set volatility)
             if (data.slv_iv != null) {
                 els.slvIv.value = data.slv_iv;
+                els.otcSpread.value = -18;
                 updateEstOtcVol();
                 els.slvIvSection.style.display = 'block';
 

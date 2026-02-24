@@ -49,7 +49,9 @@ def calculate():
         days_to_expiry = (expiry_date - valuation_date).days
         if days_to_expiry < 0:
             return jsonify({'error': 'Expiry date must be after valuation date'}), 400
-        T = days_to_expiry / 365.0
+        day_count = data.get('day_count', 'ACT/365')
+        day_base = 360 if day_count == 'ACT/360' else 365
+        T = days_to_expiry / day_base
 
         # Price per unit
         price_unit = gk_price(S, K, T, r_d, r_f, sigma, option_type)
@@ -149,7 +151,9 @@ def calc_implied_vol():
         valuation_date = datetime.strptime(data['valuation_date'], '%Y-%m-%d').date()
         expiry_date = datetime.strptime(data['expiry_date'], '%Y-%m-%d').date()
         days_to_expiry = (expiry_date - valuation_date).days
-        T = days_to_expiry / 365.0
+        day_count = data.get('day_count', 'ACT/365')
+        day_base = 360 if day_count == 'ACT/360' else 365
+        T = days_to_expiry / day_base
 
         market_premium = float(data['market_premium'])
         price_market = market_premium / notional  # price per unit

@@ -92,18 +92,25 @@
                         </div>
 
                         <!-- Dates -->
-                        <div class="col-4">
+                        <div class="col-3">
                             <label class="form-label">Valuation Date</label>
                             <input type="date" class="form-control" id="valuationDate" value="{{ today }}">
                         </div>
-                        <div class="col-4">
+                        <div class="col-3">
                             <label class="form-label">Expiry Date</label>
                             <input type="date" class="form-control" id="expiryDate" value="2026-04-27">
                         </div>
-                        <div class="col-4">
+                        <div class="col-3">
                             <label class="form-label">Days to Expiry</label>
                             <input type="number" class="form-control num-input" id="daysToExpiry"
                                    value="63" readonly style="background:#f8f9fa">
+                        </div>
+                        <div class="col-3">
+                            <label class="form-label">Day Count</label>
+                            <select class="form-select" id="dayCount">
+                                <option value="ACT/360" selected>ACT/360</option>
+                                <option value="ACT/365">ACT/365</option>
+                            </select>
                         </div>
                     </div>
                 </div>

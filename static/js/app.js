@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
         estOtcVol: document.getElementById('estOtcVol'),
         btnUseEstVol: document.getElementById('btnUseEstVol'),
         slvIvSource: document.getElementById('slvIvSource'),
+        dayCount: document.getElementById('dayCount'),
         greeksTotal: document.getElementById('greeksTotal'),
         resultsSection: document.getElementById('resultsSection'),
         calcError: document.getElementById('calcError'),
@@ -66,6 +67,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     els.valuationDate.addEventListener('change', updateDaysToExpiry);
     els.expiryDate.addEventListener('change', updateDaysToExpiry);
+    els.dayCount.addEventListener('change', updateDaysToExpiry);
 
     // --- SLV IV + OTC Spread ---
     function updateEstOtcVol() {
@@ -158,6 +160,7 @@ document.addEventListener('DOMContentLoaded', function () {
             option_type: els.optionType.value,
             valuation_date: els.valuationDate.value,
             expiry_date: els.expiryDate.value,
+            day_count: els.dayCount.value,
             market_premium: els.marketPremium.value || null,
         };
 
@@ -400,6 +403,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     option_type: els.optionType.value,
                     valuation_date: els.valuationDate.value,
                     expiry_date: els.expiryDate.value,
+                    day_count: els.dayCount.value,
                     market_premium: mp,
                 }),
             });
@@ -424,6 +428,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 showImpliedVol('info', `Volatility set to ${fmt(iv, 2)}%`);
             };
             els.impliedVolResult.appendChild(useBtn);
+
+            // Auto-calibrate OTC spread if SLV IV is available
+            const slvIvVal = parseFloat(els.slvIv.value);
+            if (!isNaN(slvIvVal) && slvIvVal > 0) {
+                const impliedSpread = iv - slvIvVal;
+                const calibrateBtn = document.createElement('button');
+                calibrateBtn.className = 'btn btn-sm btn-outline-warning ms-2';
+                calibrateBtn.textContent = `Set spread to ${fmt(impliedSpread, 1)}pp`;
+                calibrateBtn.title = `Bank IV ${fmt(iv, 2)}% − SLV IV ${fmt(slvIvVal, 2)}% = ${fmt(impliedSpread, 1)}pp`;
+                calibrateBtn.onclick = function () {
+                    els.otcSpread.value = impliedSpread.toFixed(2);
+                    updateEstOtcVol();
+                    els.volatility.value = parseFloat(els.estOtcVol.value).toFixed(2);
+                    showImpliedVol('info',
+                        `OTC Spread calibrated: ${fmt(impliedSpread, 1)}pp (SLV ${fmt(slvIvVal, 2)}% + ${fmt(impliedSpread, 1)}pp = ${fmt(iv, 2)}%)`
+                    );
+                };
+                els.impliedVolResult.appendChild(calibrateBtn);
+            }
 
         } catch (err) {
             showImpliedVol('error', 'Error: ' + err.message);

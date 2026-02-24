@@ -289,26 +289,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(data.error || 'Fetch failed');
             }
 
+            const sources = data.sources || {};
             let updated = [];
-            if (data.spot !== null) {
+            if (data.spot != null) {
                 els.spot.value = data.spot;
-                updated.push('Spot: ' + data.spot);
+                updated.push('Spot: ' + data.spot + (sources.spot ? ' [' + sources.spot + ']' : ''));
             }
-            if (data.historical_vol !== null) {
+            if (data.historical_vol != null) {
                 els.volatility.value = data.historical_vol;
-                updated.push('Hist. Vol: ' + data.historical_vol + '%');
+                updated.push('Vol: ' + data.historical_vol + '%' + (sources.volatility ? ' [' + sources.volatility + ']' : ''));
             }
-            if (data.rate_domestic !== null) {
+            if (data.rate_domestic != null) {
                 els.rateDomestic.value = data.rate_domestic;
-                updated.push('Dom. Rate: ' + data.rate_domestic + '%');
+                updated.push('Dom: ' + data.rate_domestic + '%' + (sources.rate_domestic ? ' [' + sources.rate_domestic + ']' : ''));
             }
-            if (data.rate_foreign !== null) {
+            if (data.rate_foreign != null) {
                 els.rateForeign.value = data.rate_foreign;
-                updated.push('For. Rate: ' + data.rate_foreign + '%');
+                updated.push('For: ' + data.rate_foreign + '%' + (sources.rate_foreign ? ' [' + sources.rate_foreign + ']' : ''));
             }
 
             if (updated.length > 0) {
-                showFetchStatus('success', 'Updated: ' + updated.join(' | '));
+                showFetchStatus('success', updated.join(' | '));
             } else {
                 showFetchStatus('info', 'No live data available. Please enter values manually.');
             }

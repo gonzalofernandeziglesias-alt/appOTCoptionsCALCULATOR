@@ -7,17 +7,22 @@ using the Garman-Kohlhagen model. Supports FX pairs and precious metals.
 
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime, date
+import logging
 import traceback
 
 from pricing.black_scholes import gk_price, gk_greeks, implied_volatility, breakeven_spot
 from market_data.fetcher import fetch_all_market_data
+
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s %(name)s %(levelname)s: %(message)s')
 
 app = Flask(__name__)
 
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    today = date.today().isoformat()
+    return render_template('index.html', today=today)
 
 
 @app.route('/api/calculate', methods=['POST'])

@@ -175,7 +175,21 @@ def market_data():
         base = data.get('base', 'XAG')
         quote = data.get('quote', 'EUR')
 
-        result = fetch_all_market_data(base, quote)
+        # Compute target_T from valuation/expiry dates if provided
+        target_T = 1.0
+        val_str = data.get('valuation_date')
+        exp_str = data.get('expiry_date')
+        if val_str and exp_str:
+            try:
+                val_date = datetime.strptime(val_str, '%Y-%m-%d').date()
+                exp_date = datetime.strptime(exp_str, '%Y-%m-%d').date()
+                days = (exp_date - val_date).days
+                if days > 0:
+                    target_T = days / 365.0
+            except ValueError:
+                pass
+
+        result = fetch_all_market_data(base, quote, target_T=target_T)
 
         # Convert vol to percentage for display
         if result.get('historical_vol') is not None:
@@ -184,6 +198,8 @@ def market_data():
             result['rate_domestic'] = round(result['rate_domestic'] * 100, 4)
         if result.get('rate_foreign') is not None:
             result['rate_foreign'] = round(result['rate_foreign'] * 100, 4)
+        if result.get('slv_iv') is not None:
+            result['slv_iv'] = round(result['slv_iv'] * 100, 2)
 
         return jsonify(result)
 

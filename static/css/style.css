@@ -304,3 +304,17 @@ body {
     border-bottom: 1px dotted var(--text-muted);
     cursor: help;
 }
+
+/* SLV IV panel */
+.slv-iv-panel {
+    background: #f8fafe;
+    border: 1px solid #d0dff0;
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.slv-iv-panel .form-label {
+    font-size: 0.7rem;
+    margin-bottom: 0.15rem;
+}

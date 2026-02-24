@@ -24,6 +24,12 @@ document.addEventListener('DOMContentLoaded', function () {
         btnCalculate: document.getElementById('btnCalculate'),
         btnFetch: document.getElementById('btnFetch'),
         btnImpliedVol: document.getElementById('btnImpliedVol'),
+        slvIvSection: document.getElementById('slvIvSection'),
+        slvIv: document.getElementById('slvIv'),
+        otcSpread: document.getElementById('otcSpread'),
+        estOtcVol: document.getElementById('estOtcVol'),
+        btnUseEstVol: document.getElementById('btnUseEstVol'),
+        slvIvSource: document.getElementById('slvIvSource'),
         greeksTotal: document.getElementById('greeksTotal'),
         resultsSection: document.getElementById('resultsSection'),
         calcError: document.getElementById('calcError'),
@@ -60,6 +66,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
     els.valuationDate.addEventListener('change', updateDaysToExpiry);
     els.expiryDate.addEventListener('change', updateDaysToExpiry);
+
+    // --- SLV IV + OTC Spread ---
+    function updateEstOtcVol() {
+        const slvIv = parseFloat(els.slvIv.value);
+        const spread = parseFloat(els.otcSpread.value);
+        if (!isNaN(slvIv) && !isNaN(spread)) {
+            els.estOtcVol.value = (slvIv + spread).toFixed(2);
+        }
+    }
+
+    els.otcSpread.addEventListener('input', updateEstOtcVol);
+
+    els.btnUseEstVol.addEventListener('click', function () {
+        const est = parseFloat(els.estOtcVol.value);
+        if (!isNaN(est) && est > 0) {
+            els.volatility.value = est.toFixed(2);
+            showFetchStatus('success', 'Volatility set to ' + est.toFixed(2) + '% (SLV IV + OTC spread)');
+        }
+    });
 
     // --- Update labels when currencies change ---
     function updateLabels() {
@@ -281,6 +306,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({
                     base: els.baseCurrency.value,
                     quote: els.quoteCurrency.value,
+                    valuation_date: els.valuationDate.value,
+                    expiry_date: els.expiryDate.value,
                 }),
             });
             const data = await resp.json();
@@ -295,10 +322,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 els.spot.value = data.spot;
                 updated.push('Spot: ' + data.spot + (sources.spot ? ' [' + sources.spot + ']' : ''));
             }
-            if (data.historical_vol != null) {
-                els.volatility.value = data.historical_vol;
-                updated.push('Vol: ' + data.historical_vol + '%' + (sources.volatility ? ' [' + sources.volatility + ']' : ''));
-            }
             if (data.rate_domestic != null) {
                 els.rateDomestic.value = data.rate_domestic;
                 updated.push('Dom: ' + data.rate_domestic + '%' + (sources.rate_domestic ? ' [' + sources.rate_domestic + ']' : ''));
@@ -306,6 +329,32 @@ document.addEventListener('DOMContentLoaded', function () {
             if (data.rate_foreign != null) {
                 els.rateForeign.value = data.rate_foreign;
                 updated.push('For: ' + data.rate_foreign + '%' + (sources.rate_foreign ? ' [' + sources.rate_foreign + ']' : ''));
+            }
+
+            // SLV IV + OTC Spread
+            if (data.slv_iv != null) {
+                els.slvIv.value = data.slv_iv;
+                updateEstOtcVol();
+                els.slvIvSection.style.display = 'block';
+
+                const estVol = parseFloat(els.estOtcVol.value);
+                if (!isNaN(estVol) && estVol > 0) {
+                    els.volatility.value = estVol.toFixed(2);
+                    updated.push('Vol: ' + estVol.toFixed(2) + '% (SLV ' + data.slv_iv + '% + spread)');
+                }
+
+                let srcDetail = sources.slv_iv || '';
+                if (data.slv_price != null) {
+                    srcDetail = 'SLV $' + data.slv_price.toFixed(2) + ' | ' + srcDetail;
+                }
+                els.slvIvSource.textContent = srcDetail;
+            } else {
+                // Fallback to historical vol
+                if (data.historical_vol != null) {
+                    els.volatility.value = data.historical_vol;
+                    updated.push('Vol: ' + data.historical_vol + '% [hist]');
+                }
+                els.slvIvSection.style.display = 'none';
             }
 
             if (updated.length > 0) {

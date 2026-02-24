@@ -175,6 +175,50 @@
                             </div>
                         </div>
 
+                        <!-- SLV IV Reference (shown after fetch) -->
+                        <div class="col-12" id="slvIvSection" style="display:none">
+                            <div class="slv-iv-panel">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-4">
+                                        <label class="form-label">SLV ATM IV</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control num-input" id="slvIv"
+                                                   readonly style="background:#f0f4f8; font-weight:600">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-1 text-center" style="padding-bottom:6px; font-weight:700; font-size:1.1rem">+</div>
+                                    <div class="col-3">
+                                        <label class="form-label">OTC Spread</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control num-input" id="otcSpread"
+                                                   value="15.00" step="0.5" min="-50" max="100">
+                                            <span class="input-group-text">pp</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-1 text-center" style="padding-bottom:6px; font-weight:700; font-size:1.1rem">=</div>
+                                    <div class="col-3">
+                                        <label class="form-label">Est. OTC Vol</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control num-input" id="estOtcVol"
+                                                   readonly style="background:#e8f5e9; font-weight:700">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-1">
+                                    <div class="col-9">
+                                        <small class="text-muted" id="slvIvSource"></small>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <button class="btn btn-sm btn-outline-success" id="btnUseEstVol" type="button">
+                                            Use Est. Vol
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Domestic Rate -->
                         <div class="col-6">
                             <label class="form-label">

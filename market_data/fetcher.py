@@ -8,7 +8,9 @@ and interest rates. Falls back gracefully to None when data is unavailable.
 import logging
 import requests
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
+from scipy.stats import norm
+from scipy.optimize import brentq
 
 
 log = logging.getLogger(__name__)
@@ -17,6 +19,10 @@ _HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
 }
 _TIMEOUT = 10
+
+# Reusable Yahoo session (cookie + crumb for authenticated endpoints)
+_yahoo_session = None
+_yahoo_crumb = None
 
 # Yahoo Finance FX tickers (XAG=X etc.) are dead for metals.
 # Futures tickers are the only reliable free source.
@@ -179,11 +185,164 @@ def _ecb_csv_rate(url):
     return None
 
 
-def fetch_all_market_data(base='XAG', quote='EUR'):
+def _get_yahoo_session():
+    """Get authenticated Yahoo Finance session with cookie + crumb."""
+    global _yahoo_session, _yahoo_crumb
+    if _yahoo_session is not None and _yahoo_crumb is not None:
+        return _yahoo_session, _yahoo_crumb
+    try:
+        _yahoo_session = requests.Session()
+        _yahoo_session.get('https://fc.yahoo.com', headers=_HEADERS,
+                           timeout=_TIMEOUT, allow_redirects=True)
+        resp = _yahoo_session.get(
+            'https://query2.finance.yahoo.com/v1/test/getcrumb',
+            headers=_HEADERS, timeout=_TIMEOUT)
+        _yahoo_crumb = resp.text.strip()
+        log.info("Yahoo crumb obtained: %s...", _yahoo_crumb[:6])
+        return _yahoo_session, _yahoo_crumb
+    except Exception as e:
+        log.warning("Yahoo session init error: %s", e)
+        _yahoo_session = None
+        _yahoo_crumb = None
+        return None, None
+
+
+def _bs_call_price(S, K, T, r, sigma):
+    """Plain Black-Scholes call price (no dividend/foreign rate)."""
+    if T <= 0 or sigma <= 0:
+        return max(S - K, 0.0)
+    d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    return float(S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2))
+
+
+def _bs_implied_vol(price, S, K, T, r):
+    """Solve implied vol from a call price using Brent's method."""
+    if T <= 0 or price <= 0:
+        return None
+    intrinsic = max(S - K * np.exp(-r * T), 0)
+    if price <= intrinsic:
+        return None
+    try:
+        iv = brentq(lambda s: _bs_call_price(S, K, T, r, s) - price,
+                     0.01, 5.0, xtol=1e-6)
+        return float(iv)
+    except Exception:
+        return None
+
+
+def fetch_slv_implied_vol(target_T=1.0):
+    """
+    Fetch ATM implied volatility from SLV (iShares Silver Trust) options.
+
+    Uses Yahoo Finance options chain, finds the expiry closest to target_T,
+    picks ATM calls, and calculates IV from their last traded prices.
+
+    Parameters:
+        target_T: Target time to expiry in years (matches user's option tenor)
+
+    Returns:
+        (float iv, float slv_price, str expiry_used, str source) or (None, ...)
+    """
+    try:
+        session, crumb = _get_yahoo_session()
+        if session is None:
+            return None, None, None, None
+
+        # Get available expiry dates
+        url = f'https://query2.finance.yahoo.com/v7/finance/options/SLV?crumb={crumb}'
+        resp = session.get(url, headers=_HEADERS, timeout=_TIMEOUT)
+        if resp.status_code != 200:
+            log.warning("SLV options list -> HTTP %s", resp.status_code)
+            return None, None, None, None
+
+        data = resp.json()
+        result = data.get('optionChain', {}).get('result', [])
+        if not result:
+            return None, None, None, None
+
+        slv_price = result[0].get('quote', {}).get('regularMarketPrice')
+        if not slv_price:
+            return None, None, None, None
+
+        expiry_timestamps = result[0].get('expirationDates', [])
+        if not expiry_timestamps:
+            return None, None, None, None
+
+        # Find expiry closest to target_T
+        today = date.today()
+        target_date = today + timedelta(days=int(target_T * 365))
+        best_ts = None
+        best_diff = float('inf')
+        for ts in expiry_timestamps:
+            exp_date = datetime.fromtimestamp(ts).date()
+            diff = abs((exp_date - target_date).days)
+            if diff < best_diff:
+                best_diff = diff
+                best_ts = ts
+
+        if best_ts is None:
+            return None, None, None, None
+
+        best_expiry = datetime.fromtimestamp(best_ts).date()
+        T_actual = (best_expiry - today).days / 365.0
+        if T_actual <= 0:
+            return None, None, None, None
+
+        # Fetch options chain for the selected expiry
+        url2 = (f'https://query2.finance.yahoo.com/v7/finance/options/SLV'
+                f'?crumb={crumb}&date={best_ts}')
+        resp2 = session.get(url2, headers=_HEADERS, timeout=_TIMEOUT)
+        if resp2.status_code != 200:
+            log.warning("SLV options chain -> HTTP %s", resp2.status_code)
+            return None, None, None, None
+
+        data2 = resp2.json()
+        options = data2['optionChain']['result'][0].get('options', [])
+        if not options:
+            return None, None, None, None
+
+        calls = options[0].get('calls', [])
+        if not calls:
+            return None, None, None, None
+
+        # Find ATM calls (within 5% of spot) with valid prices
+        r_usd = 0.04  # approximate US risk-free rate
+        atm_ivs = []
+        for c in calls:
+            strike = c.get('strike', 0)
+            last = c.get('lastPrice', 0)
+            if last <= 0.5:
+                continue
+            # Within 5% of ATM
+            if abs(strike - slv_price) / slv_price > 0.05:
+                continue
+            iv = _bs_implied_vol(last, slv_price, strike, T_actual, r_usd)
+            if iv and 0.05 < iv < 3.0:
+                atm_ivs.append(iv)
+
+        if not atm_ivs:
+            return None, None, None, None
+
+        # Use median to reduce outlier impact
+        atm_iv = float(np.median(atm_ivs))
+        source = (f'SLV options ({best_expiry.isoformat()}, '
+                  f'{len(atm_ivs)} ATM strikes, T={T_actual:.2f}y)')
+
+        log.info("SLV ATM IV: %.2f%% from %s", atm_iv * 100, source)
+        return atm_iv, float(slv_price), best_expiry.isoformat(), source
+
+    except Exception as e:
+        log.warning("fetch_slv_implied_vol error: %s", e)
+        return None, None, None, None
+
+
+def fetch_all_market_data(base='XAG', quote='EUR', target_T=1.0):
     """
     Fetch all available market data for an option pair.
 
-    Returns dict with keys: spot, historical_vol, rate_domestic, rate_foreign, sources
+    Returns dict with keys: spot, historical_vol, rate_domestic, rate_foreign,
+                            slv_iv, slv_price, slv_expiry, sources
     Values are None where data is unavailable.
     """
     spot, spot_src = fetch_spot(base, quote)
@@ -203,11 +362,20 @@ def fetch_all_market_data(base='XAG', quote='EUR'):
     else:
         rate_foreign, rf_src = fetch_risk_free_rate(base)
 
+    # SLV implied vol (only for silver)
+    slv_iv = None
+    slv_price = None
+    slv_expiry = None
+    slv_src = None
+    if base == 'XAG':
+        slv_iv, slv_price, slv_expiry, slv_src = fetch_slv_implied_vol(target_T)
+
     sources = {
         'spot': spot_src,
         'volatility': vol_src,
         'rate_domestic': rd_src,
         'rate_foreign': rf_src,
+        'slv_iv': slv_src,
     }
 
     return {
@@ -215,6 +383,9 @@ def fetch_all_market_data(base='XAG', quote='EUR'):
         'historical_vol': hist_vol,
         'rate_domestic': rate_domestic,
         'rate_foreign': rate_foreign,
+        'slv_iv': slv_iv,
+        'slv_price': slv_price,
+        'slv_expiry': slv_expiry,
         'sources': sources,
     }
 

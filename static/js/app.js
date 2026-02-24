@@ -334,7 +334,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 updated.push('For: ' + data.rate_foreign + '%' + (sources.rate_foreign ? ' [' + sources.rate_foreign + ']' : ''));
             }
 
-            // SLV IV + OTC Spread
+            // SLV IV + OTC Spread (show as reference, don't auto-set volatility)
             if (data.slv_iv != null) {
                 els.slvIv.value = data.slv_iv;
                 updateEstOtcVol();
@@ -342,8 +342,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 const estVol = parseFloat(els.estOtcVol.value);
                 if (!isNaN(estVol) && estVol > 0) {
-                    els.volatility.value = estVol.toFixed(2);
-                    updated.push('Vol: ' + estVol.toFixed(2) + '% (SLV ' + data.slv_iv + '% + spread)');
+                    updated.push('SLV IV: ' + data.slv_iv + '% (use panel below to apply)');
                 }
 
                 let srcDetail = sources.slv_iv || '';

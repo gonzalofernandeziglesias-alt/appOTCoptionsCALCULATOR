@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTC Options Calculator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar-custom">
+    <div class="navbar-brand">
+        OTC Options Calculator
+        <small>Garman-Kohlhagen Pricing &mdash; European Vanilla Options</small>
+    </div>
+</nav>
+
+<div class="main-content">
+
+    <!-- Row 1: Option Details + Market Data -->
+    <div class="row">
+        <!-- Option Details -->
+        <div class="col-lg-6">
+            <div class="calc-card">
+                <div class="card-header">
+                    Option Details
+                    <span class="badge bg-info">European</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <!-- Currency Pair -->
+                        <div class="col-6">
+                            <label class="form-label">Base Currency (Foreign)</label>
+                            <select class="form-select" id="baseCurrency">
+                                <option value="XAG" selected>XAG (Silver)</option>
+                                <option value="XAU">XAU (Gold)</option>
+                                <option value="XPT">XPT (Platinum)</option>
+                                <option value="EUR">EUR</option>
+                                <option value="USD">USD</option>
+                                <option value="GBP">GBP</option>
+                                <option value="CHF">CHF</option>
+                                <option value="JPY">JPY</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Quote Currency (Domestic)</label>
+                            <select class="form-select" id="quoteCurrency">
+                                <option value="EUR" selected>EUR</option>
+                                <option value="USD">USD</option>
+                                <option value="GBP">GBP</option>
+                                <option value="CHF">CHF</option>
+                                <option value="JPY">JPY</option>
+                            </select>
+                        </div>
+
+                        <!-- Option Type / Position -->
+                        <div class="col-6">
+                            <label class="form-label">Option Type</label>
+                            <select class="form-select" id="optionType">
+                                <option value="call" selected>Call (Buy Foreign)</option>
+                                <option value="put">Put (Sell Foreign)</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Position</label>
+                            <select class="form-select" id="position">
+                                <option value="buy" selected>Buy (Long)</option>
+                                <option value="sell">Sell (Short)</option>
+                            </select>
+                        </div>
+
+                        <!-- Strike -->
+                        <div class="col-6">
+                            <label class="form-label">Strike Price</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control num-input" id="strike"
+                                       value="100.0000" step="0.0001" min="0">
+                                <span class="input-group-text" id="strikeUnit">EUR</span>
+                            </div>
+                        </div>
+
+                        <!-- Notional -->
+                        <div class="col-6">
+                            <label class="form-label">Notional (Foreign Amt)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control num-input" id="notional"
+                                       value="10000" step="100" min="1">
+                                <span class="input-group-text" id="notionalUnit">XAG</span>
+                            </div>
+                        </div>
+
+                        <!-- Dates -->
+                        <div class="col-4">
+                            <label class="form-label">Valuation Date</label>
+                            <input type="date" class="form-control" id="valuationDate" value="2026-02-23">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Expiry Date</label>
+                            <input type="date" class="form-control" id="expiryDate" value="2026-04-27">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Days to Expiry</label>
+                            <input type="number" class="form-control num-input" id="daysToExpiry"
+                                   value="63" readonly style="background:#f8f9fa">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market Premium (for comparison) -->
+            <div class="calc-card">
+                <div class="card-header">
+                    Market Premium (Actual Paid)
+                    <button class="btn btn-implied-vol" id="btnImpliedVol" type="button">
+                        Calc Implied Vol
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">Total Premium Paid</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control num-input" id="marketPremium"
+                                       value="33150.00" step="0.01" min="0">
+                                <span class="input-group-text">EUR</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Transaction Fee (incl.)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control num-input" id="transactionFee"
+                                       value="1800.00" step="0.01" min="0">
+                                <span class="input-group-text">EUR</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div id="impliedVolResult" class="status-msg info" style="display:none"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Market Data -->
+        <div class="col-lg-6">
+            <div class="calc-card">
+                <div class="card-header">
+                    Market Data
+                    <button class="btn btn-fetch" id="btnFetch" type="button">
+                        <span id="fetchSpinner" class="spinner-border spinner-sm me-1" style="display:none"></span>
+                        Fetch Live Data
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <!-- Spot -->
+                        <div class="col-6">
+                            <label class="form-label">Spot Price</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control num-input" id="spot"
+                                       value="73.7516" step="0.0001" min="0">
+                                <span class="input-group-text" id="spotUnit">EUR/XAG</span>
+                            </div>
+                        </div>
+
+                        <!-- Volatility -->
+                        <div class="col-6">
+                            <label class="form-label">Volatility (Annualized)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control num-input" id="volatility"
+                                       value="30.00" step="0.01" min="0.01" max="500">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+
+                        <!-- Domestic Rate -->
+                        <div class="col-6">
+                            <label class="form-label">
+                                <span class="term-help" title="Risk-free rate for the domestic (quote) currency">
+                                    Domestic Rate (<span id="rateLabel_d">EUR</span>)
+                                </span>
+                            </label>
+                            <div class="input-group">
+                                <input type="number" class="form-control num-input" id="rateDomestic"
+                                       value="2.50" step="0.01">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+
+                        <!-- Foreign Rate -->
+                        <div class="col-6">
+                            <label class="form-label">
+                                <span class="term-help" title="Risk-free rate / lease rate for the foreign (base) currency">
+                                    Foreign Rate (<span id="rateLabel_f">XAG</span>)
+                                </span>
+                            </label>
+                            <div class="input-group">
+                                <input type="number" class="form-control num-input" id="rateForeign"
+                                       value="0.50" step="0.01">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="fetchStatus" style="display:none"></div>
+                </div>
+            </div>
+
+            <!-- Quick Info Panel -->
+            <div class="calc-card">
+                <div class="card-header">Option Summary</div>
+                <div class="card-body" id="optionSummary" style="font-size:0.85rem; line-height:1.7">
+                    <strong>XAG Call / EUR Put</strong> &mdash; European Vanilla<br>
+                    Buy the right to purchase <strong>10,000 XAG</strong> at <strong>100.0000 EUR</strong> per XAG<br>
+                    Face amount: <strong>1,000,000.00 EUR</strong><br>
+                    Expiry: <strong>27 Apr 2026</strong> (09:30 AM New York)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calculate Button -->
+    <div class="text-center my-3">
+        <button class="btn btn-calculate" id="btnCalculate" type="button">
+            <span id="calcSpinner" class="spinner-border spinner-sm me-2" style="display:none"></span>
+            Calculate Option Price
+        </button>
+    </div>
+
+    <!-- Error display -->
+    <div id="calcError" class="status-msg error" style="display:none"></div>
+
+    <!-- Results Section -->
+    <div class="results-section" id="resultsSection">
+        <div class="row">
+            <!-- Main Results -->
+            <div class="col-lg-4">
+                <div class="calc-card">
+                    <div class="card-header">Theoretical Price</div>
+                    <div class="card-body text-center">
+                        <div class="result-label">Price per unit</div>
+                        <div class="result-value" id="resPriceUnit">—</div>
+                        <div class="result-label mt-1" id="resPriceUnitLabel">EUR per XAG</div>
+                        <div class="result-divider"></div>
+                        <div class="result-label">Total Premium</div>
+                        <div class="result-value small" id="resTotalPremium">—</div>
+                        <div class="result-label" id="resTotalPremiumLabel">EUR</div>
+                        <div class="result-divider"></div>
+                        <div class="row text-start" style="font-size:0.82rem">
+                            <div class="col-6">
+                                <span class="result-label">Moneyness</span><br>
+                                <span id="resMoneyness" class="badge badge-otm">—</span>
+                                <span id="resMoneynessVal" style="font-family:var(--mono)"></span>
+                            </div>
+                            <div class="col-6">
+                                <span class="result-label">Breakeven</span><br>
+                                <span id="resBreakeven" style="font-family:var(--mono); font-weight:600">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison -->
+            <div class="col-lg-4">
+                <div class="calc-card">
+                    <div class="card-header">Market Comparison</div>
+                    <div class="card-body" id="comparisonBody">
+                        <div class="text-center text-muted" id="comparisonEmpty" style="font-size:0.85rem; padding:1rem 0">
+                            Enter market premium above to compare
+                        </div>
+                        <div id="comparisonResult" style="display:none">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="result-label">Market Premium</div>
+                                    <div class="result-value small" id="compMarket">—</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="result-label">Theoretical</div>
+                                    <div class="result-value small" id="compTheoretical">—</div>
+                                </div>
+                            </div>
+                            <div class="result-divider"></div>
+                            <div class="text-center">
+                                <div class="result-label">Difference</div>
+                                <div id="compDifference" style="font-family:var(--mono); font-size:1.1rem; font-weight:700">—</div>
+                                <div id="compAssessment" style="font-size:0.8rem; font-weight:600">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Greeks -->
+            <div class="col-lg-4">
+                <div class="calc-card">
+                    <div class="card-header">
+                        Greeks
+                        <div class="form-check form-switch" style="margin:0">
+                            <input class="form-check-input" type="checkbox" id="greeksTotal" checked>
+                            <label class="form-check-label" for="greeksTotal" style="font-size:0.7rem;text-transform:none;letter-spacing:0;font-weight:400">
+                                Total
+                            </label>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="greeks-table">
+                            <thead>
+                                <tr>
+                                    <th>Greek</th>
+                                    <th style="text-align:right">Value</th>
+                                    <th>Interpretation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="greek-name">&Delta; Delta</td>
+                                    <td style="text-align:right" id="gDelta">—</td>
+                                    <td style="font-size:0.75rem;color:var(--text-muted)" id="gDeltaDesc">Spot sensitivity</td>
+                                </tr>
+                                <tr>
+                                    <td class="greek-name">&Gamma; Gamma</td>
+                                    <td style="text-align:right" id="gGamma">—</td>
+                                    <td style="font-size:0.75rem;color:var(--text-muted)">Delta sensitivity</td>
+                                </tr>
+                                <tr>
+                                    <td class="greek-name">&nu; Vega</td>
+                                    <td style="text-align:right" id="gVega">—</td>
+                                    <td style="font-size:0.75rem;color:var(--text-muted)">Per 1% vol change</td>
+                                </tr>
+                                <tr>
+                                    <td class="greek-name">&Theta; Theta</td>
+                                    <td style="text-align:right" id="gTheta">—</td>
+                                    <td style="font-size:0.75rem;color:var(--text-muted)">Daily time decay</td>
+                                </tr>
+                                <tr>
+                                    <td class="greek-name">&rho; Rho (dom)</td>
+                                    <td style="text-align:right" id="gRhoD">—</td>
+                                    <td style="font-size:0.75rem;color:var(--text-muted)">Per 1% dom rate</td>
+                                </tr>
+                                <tr>
+                                    <td class="greek-name">&rho; Rho (for)</td>
+                                    <td style="text-align:right" id="gRhoF">—</td>
+                                    <td style="font-size:0.75rem;color:var(--text-muted)">Per 1% for rate</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Details -->
+        <div class="row">
+            <div class="col-12">
+                <div class="calc-card">
+                    <div class="card-header">Model Details</div>
+                    <div class="card-body">
+                        <div class="row" style="font-size:0.82rem; font-family:var(--mono)">
+                            <div class="col-md-2">
+                                <span class="result-label">Model</span><br>
+                                Garman-Kohlhagen
+                            </div>
+                            <div class="col-md-2">
+                                <span class="result-label">T (years)</span><br>
+                                <span id="resT">—</span>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="result-label">d1</span><br>
+                                <span id="resD1">—</span>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="result-label">d2</span><br>
+                                <span id="resD2">—</span>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="result-label">N(d1)</span><br>
+                                <span id="resNd1">—</span>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="result-label">N(d2)</span><br>
+                                <span id="resNd2">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

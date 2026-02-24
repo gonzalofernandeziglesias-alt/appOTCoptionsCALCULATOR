@@ -4,38 +4,43 @@
 
 **appOTCoptionsCALCULATOR** — OTC (Over-The-Counter) options price calculator ("Calculadora precios opciones OTC"). This application computes pricing for OTC derivative options using standard quantitative finance models.
 
-## Repository Status
-
-This is a greenfield project. The repository currently contains only this guidance file and a README. All application code, tests, and configuration are yet to be implemented.
-
 ## Codebase Structure
 
 ```
 appOTCoptionsCALCULATOR/
-├── CLAUDE.md          # AI assistant guidance (this file)
-├── README.md          # Project description
-└── (no application code yet)
+├── CLAUDE.md                  # AI assistant guidance (this file)
+├── README.md                  # Project description
+├── requirements.txt           # Python dependencies
+├── app.py                     # Flask web application (routes & API)
+├── pricing/
+│   ├── __init__.py
+│   └── black_scholes.py       # Garman-Kohlhagen pricing, Greeks, implied vol
+├── market_data/
+│   ├── __init__.py
+│   └── fetcher.py             # Live market data fetching (Yahoo Finance, ECB)
+├── templates/
+│   └── index.html             # Main UI template (Bootstrap 5)
+└── static/
+    ├── css/
+    │   └── style.css           # Custom styles
+    └── js/
+        └── app.js              # Frontend logic (AJAX, UI updates)
 ```
-
-As the project grows, update this section to reflect the actual directory layout.
 
 ## Development Guidelines
 
 ### Language & Framework
 
-Not yet decided. When chosen, document here:
-- **Language**: TBD
-- **Framework**: TBD
-- **Package manager**: TBD
+- **Language**: Python 3
+- **Framework**: Flask
+- **Frontend**: Bootstrap 5, vanilla JavaScript
+- **Package manager**: pip
 
 ### Build & Run Commands
 
-Document here once established:
-- **Install dependencies**: TBD
-- **Run dev server**: TBD
-- **Build for production**: TBD
-- **Run tests**: TBD
-- **Run linter**: TBD
+- **Install dependencies**: `pip install -r requirements.txt`
+- **Run dev server**: `python app.py` (starts on http://localhost:5000)
+- **Run tests**: `python -m pytest tests/` (when test framework is added)
 
 ### Domain Context
 

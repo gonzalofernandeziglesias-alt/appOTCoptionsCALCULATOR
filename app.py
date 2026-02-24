@@ -8,6 +8,7 @@ using the Garman-Kohlhagen model. Supports FX pairs and precious metals.
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime, date
 import logging
+import time
 import traceback
 
 from pricing.black_scholes import gk_price, gk_greeks, implied_volatility, breakeven_spot
@@ -19,10 +20,13 @@ logging.basicConfig(level=logging.INFO,
 app = Flask(__name__)
 
 
+_START_TS = str(int(time.time()))
+
+
 @app.route('/')
 def index():
     today = date.today().isoformat()
-    return render_template('index.html', today=today)
+    return render_template('index.html', today=today, cache_bust=_START_TS)
 
 
 @app.route('/api/calculate', methods=['POST'])
@@ -185,6 +189,16 @@ def market_data():
 
     except Exception as e:
         return jsonify({'error': f'Market data fetch error: {str(e)}'}), 500
+
+
+@app.route('/api/debug')
+def debug_info():
+    """Quick check that the server is running the latest code."""
+    return jsonify({
+        'version': 'v3-cache-bust',
+        'started': _START_TS,
+        'today': date.today().isoformat(),
+    })
 
 
 if __name__ == '__main__':

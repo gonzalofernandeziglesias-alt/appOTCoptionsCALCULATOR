@@ -15,6 +15,15 @@ _HEADERS = {
 }
 _TIMEOUT = 10
 
+# Yahoo Finance FX tickers (XAG=X etc.) are unreliable for metals.
+# Futures tickers work as a more stable alternative for spot approximation.
+_METAL_FUTURES = {
+    'XAG': 'SI=F',
+    'XAU': 'GC=F',
+    'XPT': 'PL=F',
+    'XPD': 'PA=F',
+}
+
 
 def fetch_spot(base='XAG', quote='EUR'):
     """
@@ -27,7 +36,7 @@ def fetch_spot(base='XAG', quote='EUR'):
     if base in ('XAG', 'XAU', 'XPT', 'XPD'):
         metal_usd = _yahoo_quote(f'{base}USD=X')
         if metal_usd is None:
-            metal_usd = _yahoo_quote(f'{base}=F')
+            metal_usd = _yahoo_quote(_METAL_FUTURES.get(base, f'{base}=F'))
 
         if quote == 'USD':
             return metal_usd
@@ -64,6 +73,10 @@ def fetch_historical_volatility(base='XAG', quote='EUR', days=60):
             symbol = f'{base}{quote}=X'
 
         closes = _yahoo_history(symbol, period='3mo')
+
+        # Fallback to futures ticker if FX ticker has no data
+        if (closes is None or len(closes) < 15) and base in _METAL_FUTURES:
+            closes = _yahoo_history(_METAL_FUTURES[base], period='3mo')
         if closes is None or len(closes) < 15:
             return None
 
@@ -98,8 +111,10 @@ def fetch_risk_free_rate(currency='EUR'):
             if resp.status_code == 200:
                 lines = resp.text.strip().split('\n')
                 if len(lines) >= 2:
-                    last_line = lines[-1]
-                    value = last_line.split(',')[-1].strip()
+                    header = lines[0].split(',')
+                    data = lines[-1].split(',')
+                    obs_idx = header.index('OBS_VALUE') if 'OBS_VALUE' in header else -1
+                    value = data[obs_idx].strip() if obs_idx >= 0 else data[-1].strip()
                     rate = float(value) / 100.0
                     if 0 <= rate <= 0.20:
                         return rate

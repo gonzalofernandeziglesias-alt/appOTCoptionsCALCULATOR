@@ -90,7 +90,8 @@ def fetch_historical_volatility(base='XAG', quote='EUR', days=60):
 def fetch_risk_free_rate(currency='EUR'):
     """
     Fetch approximate risk-free rate for a currency.
-    Uses ECB data for EUR, falls back to reasonable defaults.
+    EUR: ECB €STR (daily) -> ECB deposit facility rate -> default.
+    USD: Yahoo 13-week T-bill -> default.
 
     Returns: float annual rate (e.g. 0.025 for 2.5%) or None
     """
@@ -102,26 +103,48 @@ def fetch_risk_free_rate(currency='EUR'):
         'JPY': 0.001,
     }
 
-    # Try ECB for EUR
     if currency == 'EUR':
-        try:
-            url = ('https://data-api.ecb.europa.eu/service/data/FM/B.U2.EUR.4F.KR.DFR.LEV'
-                   '?lastNObservations=1&format=csvdata')
-            resp = requests.get(url, headers=_HEADERS, timeout=_TIMEOUT)
-            if resp.status_code == 200:
-                lines = resp.text.strip().split('\n')
-                if len(lines) >= 2:
-                    header = lines[0].split(',')
-                    data = lines[-1].split(',')
-                    obs_idx = header.index('OBS_VALUE') if 'OBS_VALUE' in header else -1
-                    value = data[obs_idx].strip() if obs_idx >= 0 else data[-1].strip()
-                    rate = float(value) / 100.0
-                    if 0 <= rate <= 0.20:
-                        return rate
-        except Exception:
-            pass
+        # Source 1: ECB €STR (Euro Short-Term Rate) — updated daily
+        rate = _ecb_csv_rate(
+            'https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2X2A25.WT'
+            '?lastNObservations=1&format=csvdata')
+        if rate is not None:
+            return rate
+        # Source 2: ECB deposit facility rate
+        rate = _ecb_csv_rate(
+            'https://data-api.ecb.europa.eu/service/data/FM/B.U2.EUR.4F.KR.DFR.LEV'
+            '?lastNObservations=1&format=csvdata')
+        if rate is not None:
+            return rate
+
+    if currency == 'USD':
+        # Yahoo ^IRX = 13-week US Treasury bill yield (returned as percentage)
+        irx = _yahoo_quote('^IRX')
+        if irx is not None:
+            rate = irx / 100.0
+            if 0 <= rate <= 0.20:
+                return rate
 
     return defaults.get(currency)
+
+
+def _ecb_csv_rate(url):
+    """Parse an ECB CSV data response and return the rate as a decimal."""
+    try:
+        resp = requests.get(url, headers=_HEADERS, timeout=_TIMEOUT)
+        if resp.status_code == 200:
+            lines = resp.text.strip().split('\n')
+            if len(lines) >= 2:
+                header = lines[0].split(',')
+                data = lines[-1].split(',')
+                obs_idx = header.index('OBS_VALUE') if 'OBS_VALUE' in header else -1
+                value = data[obs_idx].strip() if obs_idx >= 0 else data[-1].strip()
+                rate = float(value) / 100.0
+                if 0 <= rate <= 0.20:
+                    return rate
+    except Exception:
+        pass
+    return None
 
 
 def fetch_all_market_data(base='XAG', quote='EUR'):

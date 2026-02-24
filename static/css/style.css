@@ -1,0 +1,320 @@
+/* OTC Options Calculator — Custom Styles */
+
+:root {
+    --primary: #0d1b4a;
+    --primary-light: #1b2d6b;
+    --accent: #2979ff;
+    --accent-hover: #1565c0;
+    --success: #2e7d32;
+    --danger: #c62828;
+    --warning: #f57f17;
+    --bg: #f4f6f9;
+    --card-bg: #ffffff;
+    --text: #212121;
+    --text-muted: #757575;
+    --border: #e0e0e0;
+    --mono: 'SF Mono', 'Cascadia Code', 'Fira Mono', 'Consolas', monospace;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+}
+
+/* Navbar */
+.navbar-custom {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    padding: 0.75rem 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.navbar-custom .navbar-brand {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.3rem;
+    letter-spacing: 0.3px;
+}
+
+.navbar-custom .navbar-brand small {
+    color: rgba(255,255,255,0.7);
+    font-weight: 400;
+    font-size: 0.75rem;
+    display: block;
+    margin-top: 2px;
+}
+
+/* Main content */
+.main-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+/* Cards */
+.calc-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.calc-card .card-header {
+    background: var(--primary);
+    color: #ffffff;
+    padding: 0.6rem 1rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-radius: 7px 7px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.calc-card .card-header .badge {
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.calc-card .card-body {
+    padding: 1rem;
+}
+
+/* Form elements */
+.form-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.form-control, .form-select {
+    font-size: 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.15);
+}
+
+.form-control.num-input {
+    font-family: var(--mono);
+    text-align: right;
+    font-size: 0.95rem;
+}
+
+/* Input groups */
+.input-group-text {
+    font-size: 0.8rem;
+    background: #f8f9fa;
+    border-color: var(--border);
+    min-width: 45px;
+    justify-content: center;
+}
+
+/* Buttons */
+.btn-calculate {
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    font-weight: 600;
+    padding: 0.65rem 2rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+}
+
+.btn-calculate:hover {
+    background: var(--accent-hover);
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(41, 121, 255, 0.3);
+}
+
+.btn-fetch {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font-size: 0.78rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-fetch:hover {
+    background: var(--accent);
+    color: #ffffff;
+}
+
+.btn-implied-vol {
+    background: transparent;
+    color: var(--warning);
+    border: 1px solid var(--warning);
+    font-size: 0.78rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.btn-implied-vol:hover {
+    background: var(--warning);
+    color: #ffffff;
+}
+
+/* Results section */
+.results-section {
+    display: none;
+}
+
+.results-section.visible {
+    display: block;
+}
+
+.result-value {
+    font-family: var(--mono);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.result-value.small {
+    font-size: 1.1rem;
+}
+
+.result-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Greeks table */
+.greeks-table {
+    width: 100%;
+    font-size: 0.85rem;
+}
+
+.greeks-table th {
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+    padding: 0.4rem 0.5rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.greeks-table td {
+    font-family: var(--mono);
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.greeks-table td.greek-name {
+    font-family: inherit;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* Comparison section */
+.comparison-positive {
+    color: var(--success);
+    font-weight: 600;
+}
+
+.comparison-negative {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+/* Moneyness badge */
+.badge-otm { background: var(--danger); }
+.badge-atm { background: var(--warning); color: #000; }
+.badge-itm { background: var(--success); }
+
+/* Status messages */
+.status-msg {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+}
+
+.status-msg.success {
+    background: #e8f5e9;
+    color: var(--success);
+    border: 1px solid #c8e6c9;
+}
+
+.status-msg.error {
+    background: #ffebee;
+    color: var(--danger);
+    border: 1px solid #ffcdd2;
+}
+
+.status-msg.info {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #bbdefb;
+}
+
+/* Spinner */
+.spinner-sm {
+    width: 14px;
+    height: 14px;
+    border-width: 2px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .main-content {
+        padding: 0.75rem;
+    }
+
+    .result-value {
+        font-size: 1.3rem;
+    }
+}
+
+/* Separator line in results */
+.result-divider {
+    border-top: 1px solid var(--border);
+    margin: 0.75rem 0;
+}
+
+/* Tooltip for financial terms */
+.term-help {
+    border-bottom: 1px dotted var(--text-muted);
+    cursor: help;
+}
+
+/* SLV IV panel */
+.slv-iv-panel {
+    background: #f8fafe;
+    border: 1px solid #d0dff0;
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.slv-iv-panel .form-label {
+    font-size: 0.7rem;
+    margin-bottom: 0.15rem;
+}

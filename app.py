@@ -6,7 +6,7 @@ using the Garman-Kohlhagen model. Supports FX pairs and precious metals.
 """
 
 from flask import Flask, render_template, jsonify, request
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import logging
 import time
 import traceback
@@ -21,6 +21,16 @@ app = Flask(__name__)
 
 
 _START_TS = str(int(time.time()))
+
+
+def _add_business_days(start_date, n):
+    """Advance start_date by n business days (skipping weekends)."""
+    current = start_date
+    for _ in range(n):
+        current += timedelta(days=1)
+        while current.weekday() >= 5:  # Saturday=5, Sunday=6
+            current += timedelta(days=1)
+    return current
 
 
 @app.route('/')
@@ -46,9 +56,11 @@ def calculate():
         # Time to expiry
         valuation_date = datetime.strptime(data['valuation_date'], '%Y-%m-%d').date()
         expiry_date = datetime.strptime(data['expiry_date'], '%Y-%m-%d').date()
-        days_to_expiry = (expiry_date - valuation_date).days
+        spot_days = int(data.get('spot_days', 0))
+        spot_date = _add_business_days(valuation_date, spot_days)
+        days_to_expiry = (expiry_date - spot_date).days
         if days_to_expiry < 0:
-            return jsonify({'error': 'Expiry date must be after valuation date'}), 400
+            return jsonify({'error': 'Expiry date must be after spot date'}), 400
         day_count = data.get('day_count', 'ACT/365')
         day_base = 360 if day_count == 'ACT/360' else 365
         T = days_to_expiry / day_base
@@ -105,6 +117,7 @@ def calculate():
             'price_per_unit': round(price_unit, 6),
             'total_premium': round(total_premium, 2),
             'days_to_expiry': days_to_expiry,
+            'spot_date': spot_date.isoformat() if spot_days > 0 else None,
             'T': round(T, 6),
             'greeks_unit': {k: round(v, 8) for k, v in greeks.items()},
             'greeks_total': {k: round(v, 4) for k, v in greeks_total.items()},
@@ -150,7 +163,9 @@ def calc_implied_vol():
 
         valuation_date = datetime.strptime(data['valuation_date'], '%Y-%m-%d').date()
         expiry_date = datetime.strptime(data['expiry_date'], '%Y-%m-%d').date()
-        days_to_expiry = (expiry_date - valuation_date).days
+        spot_days = int(data.get('spot_days', 0))
+        spot_date = _add_business_days(valuation_date, spot_days)
+        days_to_expiry = (expiry_date - spot_date).days
         day_count = data.get('day_count', 'ACT/365')
         day_base = 360 if day_count == 'ACT/360' else 365
         T = days_to_expiry / day_base

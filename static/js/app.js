@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
         estOtcVol: document.getElementById('estOtcVol'),
         btnUseEstVol: document.getElementById('btnUseEstVol'),
         slvIvSource: document.getElementById('slvIvSource'),
+        spotDays: document.getElementById('spotDays'),
         dayCount: document.getElementById('dayCount'),
         greeksTotal: document.getElementById('greeksTotal'),
         resultsSection: document.getElementById('resultsSection'),
@@ -54,19 +55,33 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // --- Update days to expiry when dates change ---
+    function addBusinessDays(startDate, n) {
+        const d = new Date(startDate);
+        for (let i = 0; i < n; i++) {
+            d.setDate(d.getDate() + 1);
+            while (d.getDay() === 0 || d.getDay() === 6) {
+                d.setDate(d.getDate() + 1);
+            }
+        }
+        return d;
+    }
+
     function updateDaysToExpiry() {
         const val = els.valuationDate.value;
         const exp = els.expiryDate.value;
         if (val && exp) {
-            const d1 = new Date(val);
-            const d2 = new Date(exp);
-            const days = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+            const spotOffset = parseInt(els.spotDays.value) || 0;
+            const valDate = new Date(val + 'T00:00:00');
+            const spotDate = addBusinessDays(valDate, spotOffset);
+            const expDate = new Date(exp + 'T00:00:00');
+            const days = Math.round((expDate - spotDate) / (1000 * 60 * 60 * 24));
             els.daysToExpiry.value = days;
         }
     }
 
     els.valuationDate.addEventListener('change', updateDaysToExpiry);
     els.expiryDate.addEventListener('change', updateDaysToExpiry);
+    els.spotDays.addEventListener('change', updateDaysToExpiry);
     els.dayCount.addEventListener('change', updateDaysToExpiry);
 
     // --- SLV IV + OTC Spread ---
@@ -160,6 +175,7 @@ document.addEventListener('DOMContentLoaded', function () {
             option_type: els.optionType.value,
             valuation_date: els.valuationDate.value,
             expiry_date: els.expiryDate.value,
+            spot_days: parseInt(els.spotDays.value) || 0,
             day_count: els.dayCount.value,
             market_premium: els.marketPremium.value || null,
         };
@@ -405,6 +421,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     option_type: els.optionType.value,
                     valuation_date: els.valuationDate.value,
                     expiry_date: els.expiryDate.value,
+                    spot_days: parseInt(els.spotDays.value) || 0,
                     day_count: els.dayCount.value,
                     market_premium: mp,
                 }),

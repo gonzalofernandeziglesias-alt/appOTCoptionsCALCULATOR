@@ -244,6 +244,17 @@ body {
     font-weight: 600;
 }
 
+/* P&L display */
+.pnl-profit {
+    color: var(--success);
+    font-weight: 700;
+}
+
+.pnl-loss {
+    color: var(--danger);
+    font-weight: 700;
+}
+
 /* Moneyness badge */
 .badge-otm { background: var(--danger); }
 .badge-atm { background: var(--warning); color: #000; }

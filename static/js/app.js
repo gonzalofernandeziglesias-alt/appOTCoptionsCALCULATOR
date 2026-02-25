@@ -223,47 +223,49 @@ document.addEventListener('DOMContentLoaded', function () {
         // Greeks
         updateGreeksDisplay(data);
 
-        // Comparison
-        const compResult = document.getElementById('comparisonResult');
-        const compEmpty = document.getElementById('comparisonEmpty');
+        // Position P&L
+        const pnlResult = document.getElementById('pnlResult');
+        const pnlEmpty = document.getElementById('pnlEmpty');
+        const entryPremium = parseFloat(els.marketPremium.value);
 
-        if (data.comparison) {
-            compEmpty.style.display = 'none';
-            compResult.style.display = 'block';
+        if (!isNaN(entryPremium) && entryPremium > 0) {
+            pnlEmpty.style.display = 'none';
+            pnlResult.style.display = 'block';
 
-            document.getElementById('compMarket').textContent = fmt(data.comparison.market_premium, 2);
-            document.getElementById('compTheoretical').textContent = fmt(data.total_premium, 2);
+            const currentValue = data.total_premium;
+            // Buy: P&L = current value - entry cost
+            // Sell: P&L = entry revenue - current liability
+            const pnl = sign * (currentValue - entryPremium);
+            const pnlPct = (pnl / entryPremium) * 100;
 
-            const diff = data.comparison.difference * sign;
-            const diffPct = data.comparison.difference_pct * sign;
-            const diffEl = document.getElementById('compDifference');
-            diffEl.textContent = `${fmtSigned(diff, 2)} ${quote} (${fmtSigned(diffPct, 1)}%)`;
+            document.getElementById('pnlEntry').textContent = fmt(entryPremium, 2);
+            document.getElementById('pnlMtM').textContent = fmt(currentValue, 2);
 
-            const assessEl = document.getElementById('compAssessment');
-            if (position === 'buy') {
-                if (data.comparison.difference > 0) {
-                    diffEl.className = 'comparison-negative';
-                    assessEl.textContent = 'You paid more than theoretical value';
-                    assessEl.className = 'comparison-negative';
-                } else {
-                    diffEl.className = 'comparison-positive';
-                    assessEl.textContent = 'You paid less than theoretical value';
-                    assessEl.className = 'comparison-positive';
-                }
+            const pnlAmountEl = document.getElementById('pnlAmount');
+            pnlAmountEl.textContent = `${fmtSigned(pnl, 2)} ${quote}`;
+            pnlAmountEl.className = pnl >= 0 ? 'pnl-profit' : 'pnl-loss';
+
+            const pnlPctEl = document.getElementById('pnlPercent');
+            pnlPctEl.textContent = `(${fmtSigned(pnlPct, 1)}%)`;
+            pnlPctEl.className = pnl >= 0 ? 'pnl-profit' : 'pnl-loss';
+
+            // Intrinsic and time value decomposition
+            const spotVal = parseFloat(els.spot.value);
+            const strikeVal = parseFloat(els.strike.value);
+            const notionalVal = parseFloat(els.notional.value);
+            let intrinsic;
+            if (els.optionType.value === 'call') {
+                intrinsic = Math.max(spotVal - strikeVal, 0) * notionalVal;
             } else {
-                if (data.comparison.difference > 0) {
-                    diffEl.className = 'comparison-positive';
-                    assessEl.textContent = 'You received more than theoretical value';
-                    assessEl.className = 'comparison-positive';
-                } else {
-                    diffEl.className = 'comparison-negative';
-                    assessEl.textContent = 'You received less than theoretical value';
-                    assessEl.className = 'comparison-negative';
-                }
+                intrinsic = Math.max(strikeVal - spotVal, 0) * notionalVal;
             }
+            const timeValue = currentValue - intrinsic;
+
+            document.getElementById('pnlIntrinsic').textContent = fmt(intrinsic, 2) + ' ' + quote;
+            document.getElementById('pnlTimeValue').textContent = fmt(timeValue, 2) + ' ' + quote;
         } else {
-            compEmpty.style.display = 'block';
-            compResult.style.display = 'none';
+            pnlEmpty.style.display = 'block';
+            pnlResult.style.display = 'none';
         }
 
         els.resultsSection.classList.add('visible');
@@ -337,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // SLV IV + OTC Spread (show as reference, don't auto-set volatility)
             if (data.slv_iv != null) {
                 els.slvIv.value = data.slv_iv;
-                els.otcSpread.value = -18;
+                els.otcSpread.value = 6.76;
                 updateEstOtcVol();
                 els.slvIvSection.style.display = 'block';
 

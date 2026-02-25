@@ -110,17 +110,17 @@
                                 <span class="term-help" title="Settlement offset: T+0 (no adjustment), T+1, T+2 (standard FX). Subtracts business days from valuation date to compute effective T.">Spot Days</span>
                             </label>
                             <select class="form-select" id="spotDays">
-                                <option value="0" selected>T+0</option>
+                                <option value="0">T+0</option>
                                 <option value="1">T+1</option>
-                                <option value="2">T+2</option>
+                                <option value="2" selected>T+2</option>
                                 <option value="3">T+3</option>
                             </select>
                         </div>
                         <div class="col-2">
                             <label class="form-label">Day Count</label>
                             <select class="form-select" id="dayCount">
-                                <option value="ACT/360" selected>ACT/360</option>
-                                <option value="ACT/365">ACT/365</option>
+                                <option value="ACT/360">ACT/360</option>
+                                <option value="ACT/365" selected>ACT/365</option>
                             </select>
                         </div>
                     </div>

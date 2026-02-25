@@ -24,6 +24,10 @@ document.addEventListener('DOMContentLoaded', function () {
         btnCalculate: document.getElementById('btnCalculate'),
         btnFetch: document.getElementById('btnFetch'),
         btnImpliedVol: document.getElementById('btnImpliedVol'),
+        bankPriceUnit: document.getElementById('bankPriceUnit'),
+        bankQuotedVol: document.getElementById('bankQuotedVol'),
+        btnCalibrateVol: document.getElementById('btnCalibrateVol'),
+        calibrateResult: document.getElementById('calibrateResult'),
         slvIvSection: document.getElementById('slvIvSection'),
         slvIv: document.getElementById('slvIv'),
         otcSpread: document.getElementById('otcSpread'),
@@ -103,6 +107,69 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // --- Calibrate Vol to Bank Price ---
+    els.btnCalibrateVol.addEventListener('click', async function () {
+        const bankPrice = parseFloat(els.bankPriceUnit.value);
+        if (!bankPrice || bankPrice <= 0) {
+            showCalibrateResult('error', 'Enter the bank\'s price per unit first.');
+            return;
+        }
+
+        const notional = parseFloat(els.notional.value);
+        const marketPremiumForIV = bankPrice * notional;
+
+        els.btnCalibrateVol.disabled = true;
+
+        try {
+            const resp = await fetch('/api/implied-vol', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    spot: parseFloat(els.spot.value),
+                    strike: parseFloat(els.strike.value),
+                    rate_domestic: parseFloat(els.rateDomestic.value),
+                    rate_foreign: parseFloat(els.rateForeign.value),
+                    notional: notional,
+                    option_type: els.optionType.value,
+                    valuation_date: els.valuationDate.value,
+                    expiry_date: els.expiryDate.value,
+                    spot_days: parseInt(els.spotDays.value) || 0,
+                    day_count: els.dayCount.value,
+                    market_premium: marketPremiumForIV,
+                }),
+            });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                throw new Error(data.error || 'Calibration failed');
+            }
+
+            const iv = data.implied_volatility;
+            const bankVol = parseFloat(els.bankQuotedVol.value);
+
+            // Set the calibrated vol
+            els.volatility.value = iv.toFixed(2);
+
+            let msg = `Vol calibrated: ${fmt(iv, 2)}% → price = ${fmt(bankPrice, 4)} per unit`;
+            if (!isNaN(bankVol) && bankVol > 0) {
+                const gap = bankVol - iv;
+                msg += ` | Bank quotes ${fmt(bankVol, 2)}% (convention gap: ${fmtSigned(gap, 2)}pp)`;
+            }
+            showCalibrateResult('success', msg);
+
+        } catch (err) {
+            showCalibrateResult('error', 'Error: ' + err.message);
+        } finally {
+            els.btnCalibrateVol.disabled = false;
+        }
+    });
+
+    function showCalibrateResult(type, msg) {
+        els.calibrateResult.className = 'status-msg ' + type;
+        els.calibrateResult.textContent = msg;
+        els.calibrateResult.style.display = 'block';
+    }
+
     // --- Update labels when currencies change ---
     function updateLabels() {
         const base = els.baseCurrency.value;
@@ -110,6 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('strikeUnit').textContent = quote;
         document.getElementById('notionalUnit').textContent = base;
         document.getElementById('spotUnit').textContent = quote + '/' + base;
+        document.getElementById('bankPriceUnitLabel').textContent = quote;
         document.getElementById('rateLabel_d').textContent = quote;
         document.getElementById('rateLabel_f').textContent = base;
         updateSummary();
